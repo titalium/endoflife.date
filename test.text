@@ -1,0 +1,79 @@
+<?php
+
+// URL de la requête
+$url = 'https://monlien';
+
+// Identifiants
+$username = 'identifiant';
+$password = 'motdepasse';
+
+// Initialisation de la session cURL
+$ch = curl_init();
+
+// Configuration des options cURL
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_USERPWD, $username . ':' . $password);
+curl_setopt($ch, CURLOPT_HTTPHEADER, [
+    'Accept: application/json',
+    'X-HTTP-Method-Override: GET'
+]);
+curl_setopt($ch, CURLOPT_POST, true);
+
+// Exécution de la requête
+$response = curl_exec($ch);
+
+// Vérification des erreurs
+if (curl_errno($ch)) {
+    echo 'Erreur cURL : ' . curl_error($ch);
+    exit;
+}
+
+// Fermeture de la session cURL
+curl_close($ch);
+
+// Décodage de la réponse JSON
+$data = json_decode($response, true);
+
+if (json_last_error() !== JSON_ERROR_NONE) {
+    echo "Erreur lors du décodage JSON : " . json_last_error_msg();
+    exit;
+}
+
+// Traitement des données
+$summary = [];
+foreach ($data as $item) {
+    $attr = $item['attrs'] ?? 'Inconnu';
+    $name = $item['name'] ?? 'Inconnu';
+    $state = $item['state'] ?? null;
+
+    if (!isset($summary[$attr])) {
+        $summary[$attr] = ['count' => 0, 'states' => []];
+    }
+    $summary[$attr]['count']++;
+    $summary[$attr]['states'][] = $state;
+}
+
+// Affichage du tableau HTML
+echo "<table border='1'>
+    <tr>
+        <th>Attrs</th>
+        <th>Nombre de noms</th>
+        <th>États</th>
+    </tr>";
+
+foreach ($summary as $attr => $info) {
+    echo "<tr>
+        <td>{$attr}</td>
+        <td>{$info['count']}</td>
+        <td>";
+    foreach ($info['states'] as $state) {
+        $color = ($state == 0) ? 'green' : 'red';
+        echo "<span style='color: {$color}; font-size: 20px;'>●</span> ";
+    }
+    echo "</td>
+    </tr>";
+}
+
+echo "</table>";
