@@ -1,51 +1,55 @@
-function Download-YoutubeVideo {
+function Get-YouTubeVideo {
     param (
-        [Parameter(Mandatory=$true)]
-        [string]$Url
+        [string]$VideoUrl = (Read-Host -Prompt "Entrez l'URL de la vidéo YouTube")
     )
 
     try {
-        # Extraire l'ID de la vidéo de l'URL YouTube
-        $videoId = if ($Url -match '(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})') {
-            $matches[1]
-        } else {
-            throw "Format d'URL YouTube invalide"
+        # Vérifier si l'URL est vide
+        if ([string]::IsNullOrWhiteSpace($VideoUrl)) {
+            throw "L'URL ne peut pas être vide"
         }
 
-        # URL de l'API pour obtenir les informations de la vidéo
-        $infoUrl = "https://www.youtube.com/get_video_info?video_id=$videoId"
+        # Extraire l'ID de la vidéo
+        $videoId = if ($VideoUrl -match '(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})') {
+            $matches[1]
+        } else {
+            throw "URL YouTube invalide"
+        }
 
-        # Créer un WebClient
-        $webClient = New-Object System.Net.WebClient
+        Write-Host "Traitement de la vidéo avec l'ID: $videoId" -ForegroundColor Cyan
 
-        # Configurer un User-Agent pour éviter les blocages
-        $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-        Write-Host "Récupération des informations de la vidéo..."
+        # Construire l'URL de l'API iframe
+        $embedUrl = "https://www.youtube.com/embed/$videoId"
         
-        # Créer le dossier de destination s'il n'existe pas
+        # Récupérer la page
+        $response = Invoke-WebRequest -Uri $embedUrl -Headers @{
+            "User-Agent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "Accept" = "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"
+        }
+
+        # Créer le dossier de destination
         $outputPath = "$HOME\Videos\YouTube"
         if (-not (Test-Path $outputPath)) {
+            Write-Host "Création du dossier $outputPath..." -ForegroundColor Yellow
             New-Item -ItemType Directory -Path $outputPath | Out-Null
         }
 
-        # Télécharger la vidéo
         $outputFile = Join-Path $outputPath "$videoId.mp4"
-        Write-Host "Téléchargement de la vidéo vers: $outputFile"
-        $webClient.DownloadFile($Url, $outputFile)
 
-        Write-Host "Téléchargement terminé avec succès!" -ForegroundColor Green
+        Write-Host "Téléchargement en cours..." -ForegroundColor Yellow
+        # Tentative de téléchargement direct
+        Invoke-WebRequest -Uri "https://www.youtube.com/get_video_info?video_id=$videoId" -OutFile $outputFile
+
+        Write-Host "Téléchargement terminé: $outputFile" -ForegroundColor Green
     }
     catch {
-        Write-Host "Erreur lors du téléchargement: $_" -ForegroundColor Red
+        Write-Host "Erreur: $_" -ForegroundColor Red
     }
     finally {
-        if ($webClient) {
-            $webClient.Dispose()
-        }
+        Write-Host "`nAppuyez sur une touche pour quitter..." -ForegroundColor Cyan
+        $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
     }
 }
 
-
-.\Download-Youtube.ps1
-Download-YoutubeVideo -Url "https://www.youtube.com/watch?v=VIDEO_ID"
+# Exécuter la fonction
+Get-YouTubeVideo
