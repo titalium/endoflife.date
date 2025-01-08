@@ -1,0 +1,47 @@
+function Download-YoutubeVideo {
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$Url
+    )
+
+    try {
+        # Extraire l'ID de la vidéo de l'URL YouTube
+        $videoId = if ($Url -match '(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})') {
+            $matches[1]
+        } else {
+            throw "Format d'URL YouTube invalide"
+        }
+
+        # URL de l'API pour obtenir les informations de la vidéo
+        $infoUrl = "https://www.youtube.com/get_video_info?video_id=$videoId"
+
+        # Créer un WebClient
+        $webClient = New-Object System.Net.WebClient
+
+        # Configurer un User-Agent pour éviter les blocages
+        $webClient.Headers.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+        Write-Host "Récupération des informations de la vidéo..."
+        
+        # Créer le dossier de destination s'il n'existe pas
+        $outputPath = "$HOME\Videos\YouTube"
+        if (-not (Test-Path $outputPath)) {
+            New-Item -ItemType Directory -Path $outputPath | Out-Null
+        }
+
+        # Télécharger la vidéo
+        $outputFile = Join-Path $outputPath "$videoId.mp4"
+        Write-Host "Téléchargement de la vidéo vers: $outputFile"
+        $webClient.DownloadFile($Url, $outputFile)
+
+        Write-Host "Téléchargement terminé avec succès!" -ForegroundColor Green
+    }
+    catch {
+        Write-Host "Erreur lors du téléchargement: $_" -ForegroundColor Red
+    }
+    finally {
+        if ($webClient) {
+            $webClient.Dispose()
+        }
+    }
+}
