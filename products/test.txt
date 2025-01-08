@@ -45,3 +45,7 @@ function Download-YoutubeVideo {
         }
     }
 }
+
+
+.\Download-Youtube.ps1
+Download-YoutubeVideo -Url "https://www.youtube.com/watch?v=VIDEO_ID"
